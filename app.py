@@ -23,7 +23,16 @@ app = Flask(
 )
 
 # Enable CORS for frontend-backend communication
-CORS(app, origins=['https://carbon-calculator-frontend.vercel.app', 'http://localhost:3000'])
+CORS(app, 
+     origins=[
+         'https://carbon-calculator-frontend.vercel.app', 
+         'https://new-carbon-calculator.onrender.com',
+         'http://localhost:3000',
+         'http://localhost:5001'
+     ],
+     methods=['GET', 'POST', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization']
+)
 
 app.logger.setLevel(logging.DEBUG)
 logging.basicConfig(
@@ -270,8 +279,16 @@ def health():
     return jsonify(health_status), 200
 
 
-@app.route("/calculate", methods=["POST"])
+@app.route("/calculate", methods=["POST", "OPTIONS"])
 def calculate():
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
     global health_status
     health_status["total_requests"] += 1
     
@@ -288,11 +305,21 @@ def calculate():
         return jsonify(error=str(e)), 400
         
     avg = float(df["co2e_total"].mean())
-    return jsonify(yearly_data=df.to_dict("records"), average_co2e=round(avg, 3))
+    response = jsonify(yearly_data=df.to_dict("records"), average_co2e=round(avg, 3))
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 
-@app.route("/download_report", methods=["POST"])
+@app.route("/download_report", methods=["POST", "OPTIONS"])
 def download_report():
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
     data = request.get_json(force=True)
     yrs = int(data["project_years"])
     sched = [
@@ -332,12 +359,14 @@ def download_report():
         dbh_df.to_excel(writer, sheet_name="DBH by Year", index=False)
     buf.seek(0)
 
-    return send_file(
+    response = send_file(
         buf,
         as_attachment=True,
         download_name="carbon_report.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 
 if __name__ == "__main__":
