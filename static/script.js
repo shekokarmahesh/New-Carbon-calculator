@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       trees:      +ent.querySelector('[name=trees]').value
     }));
 
-    const backendUrl = 'https://carbon-calculator-backend.onrender.com';
+    const backendUrl = 'https://new-carbon-calculator.onrender.com';
     const res = await fetch(`${backendUrl}/calculate`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
       trees:      +ent.querySelector('[name=trees]').value
     }));
 
-    const backendUrl = 'https://carbon-calculator-backend.onrender.com';
+    const backendUrl = 'https://new-carbon-calculator.onrender.com';
     const res = await fetch(`${backendUrl}/download_report`, {
       method: 'POST',
       headers:{'Content-Type':'application/json'},
