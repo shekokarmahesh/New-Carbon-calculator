@@ -1,0 +1,13 @@
+{
+  "name": "carbon-calculator-frontend",
+  "version": "1.0.0",
+  "description": "Carbon Calculator Frontend",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "dev": "python -m http.server 3000"
+  },
+  "keywords": ["carbon", "calculator", "environment"],
+  "author": "",
+  "license": "MIT"
+}

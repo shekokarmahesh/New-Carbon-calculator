@@ -1,0 +1,27 @@
+:root {
+  --brand-green: #198754;
+  --bg-light: #f9fafb;
+  --text-dark: #343a40;
+}
+
+body {
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+}
+
+.card {
+  border-radius: 0.75rem;
+}
+
+#scheduleList .entry {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#scheduleList .remove {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 1.25rem;
+}
