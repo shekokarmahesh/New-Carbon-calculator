@@ -4,3 +4,4 @@ numpy
 openpyxl
 gunicorn
 flask-cors
+requests

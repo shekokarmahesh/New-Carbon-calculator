@@ -2,7 +2,11 @@ import os
 import logging
 import re
 import math
+import threading
+import time
+import requests
 from io import BytesIO
+from datetime import datetime
 
 import pandas as pd
 from flask import Flask, render_template, request, send_file, jsonify
@@ -24,8 +28,17 @@ CORS(app, origins=['https://carbon-calculator-frontend.vercel.app', 'http://loca
 app.logger.setLevel(logging.DEBUG)
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctctime)s - %(levelname)s - %(message)s"
 )
+
+# Global variables for health monitoring
+app_start_time = datetime.now()
+health_status = {
+    "status": "healthy",
+    "uptime": 0,
+    "last_check": datetime.now().isoformat(),
+    "total_requests": 0
+}
 
 # Constants
 CARBON_FRACTION = 0.5
@@ -199,14 +212,69 @@ def run_multi(schedule, yrs):
     return df
 
 
+def self_ping():
+    """Self-ping mechanism to keep the service alive"""
+    while True:
+        try:
+            # Get the current URL (works for both local and production)
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5001')
+            if not base_url.startswith('http'):
+                base_url = f'https://{base_url}'
+            
+            health_url = f"{base_url}/health"
+            
+            # Ping the health endpoint
+            response = requests.get(health_url, timeout=10)
+            if response.status_code == 200:
+                app.logger.info(f"Self-ping successful: {health_url}")
+            else:
+                app.logger.warning(f"Self-ping failed with status {response.status_code}")
+                
+        except Exception as e:
+            app.logger.error(f"Self-ping error: {str(e)}")
+        
+        # Wait 5 minutes (300 seconds)
+        time.sleep(300)
+
+
+def start_self_ping():
+    """Start the self-ping thread"""
+    ping_thread = threading.Thread(target=self_ping, daemon=True)
+    ping_thread.start()
+    app.logger.info("Self-ping mechanism started (every 5 minutes)")
+
+
 @app.route("/")
 def index():
     species = pd.DataFrame(SPECIES_METADATA)[["species_id", "species_name"]].to_dict("records")
     return render_template("index.html", species_list=species)
 
 
+@app.route("/health")
+def health():
+    """Health check endpoint for monitoring and self-pinging"""
+    global health_status
+    
+    # Update health status
+    current_time = datetime.now()
+    uptime_seconds = (current_time - app_start_time).total_seconds()
+    
+    health_status.update({
+        "status": "healthy",
+        "uptime": round(uptime_seconds, 2),
+        "last_check": current_time.isoformat(),
+        "timestamp": current_time.isoformat(),
+        "version": "1.0.0"
+    })
+    
+    return jsonify(health_status), 200
+
+
 @app.route("/calculate", methods=["POST"])
 def calculate():
+    global health_status
+    health_status["total_requests"] += 1
+    
     data = request.get_json(force=True)
     yrs = int(data["project_years"])
     sched = [
@@ -273,5 +341,8 @@ def download_report():
 
 
 if __name__ == "__main__":
+    # Start self-ping mechanism
+    start_self_ping()
+    
     port = int(os.environ.get('PORT', 5001))
     app.run(host="0.0.0.0", port=port, debug=False)
