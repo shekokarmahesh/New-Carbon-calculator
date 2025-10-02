@@ -22,17 +22,22 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'static')
 )
 
-# Enable CORS for frontend-backend communication
+# Enable CORS for frontend-backend communication - Allow all origins
 CORS(app, 
-     origins=[
-         'https://carbon-calculator-frontend.vercel.app', 
-         'https://new-carbon-calculator.onrender.com',
-         'http://localhost:3000',
-         'http://localhost:5001'
-     ],
-     methods=['GET', 'POST', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization']
+     origins='*',
+     methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+     allow_headers=['*'],
+     supports_credentials=False
 )
+
+# Add global CORS headers for all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    response.headers.add('Access-Control-Allow-Methods', '*')
+    response.headers.add('Access-Control-Allow-Credentials', 'false')
+    return response
 
 app.logger.setLevel(logging.DEBUG)
 logging.basicConfig(
@@ -283,11 +288,7 @@ def health():
 def calculate():
     # Handle preflight OPTIONS request
     if request.method == "OPTIONS":
-        response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        return response
+        return jsonify({})
     
     global health_status
     health_status["total_requests"] += 1
@@ -305,20 +306,14 @@ def calculate():
         return jsonify(error=str(e)), 400
         
     avg = float(df["co2e_total"].mean())
-    response = jsonify(yearly_data=df.to_dict("records"), average_co2e=round(avg, 3))
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    return jsonify(yearly_data=df.to_dict("records"), average_co2e=round(avg, 3))
 
 
 @app.route("/download_report", methods=["POST", "OPTIONS"])
 def download_report():
     # Handle preflight OPTIONS request
     if request.method == "OPTIONS":
-        response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        return response
+        return jsonify({})
     
     data = request.get_json(force=True)
     yrs = int(data["project_years"])
@@ -359,14 +354,12 @@ def download_report():
         dbh_df.to_excel(writer, sheet_name="DBH by Year", index=False)
     buf.seek(0)
 
-    response = send_file(
+    return send_file(
         buf,
         as_attachment=True,
         download_name="carbon_report.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
 
 
 if __name__ == "__main__":
